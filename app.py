@@ -45,45 +45,110 @@ st.set_page_config(
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&display=swap');
-html, body, [class*="css"], [data-testid="stAppViewContainer"] {
+
+/* ألوان متوافقة تلقائيًا مع ثيم Streamlit الداكن والفاتح */
+:root {
+    --app-bg: var(--background-color, #F5F8FC);
+    --panel-bg: var(--secondary-background-color, #FFFFFF);
+    --app-text: var(--text-color, #172B4D);
+    --muted-text: color-mix(in srgb, var(--app-text) 68%, transparent);
+    --app-border: color-mix(in srgb, var(--app-text) 15%, transparent);
+}
+html, body, [class*="css"], [data-testid="stAppViewContainer"],
+[data-testid="stMarkdownContainer"], .stApp {
     font-family: 'Cairo', sans-serif !important;
 }
-:root { --navy:#10243A; --blue:#2563EB; --teal:#0F9D8A; --gold:#D99A22; }
-.stApp { background: linear-gradient(180deg,#F5F8FC 0%,#EEF3F9 100%); }
+.stApp, [data-testid="stAppViewContainer"], [data-testid="stMain"],
+[data-testid="stMainBlockContainer"], .block-container {
+    background: var(--app-bg) !important;
+    color: var(--app-text) !important;
+}
 .block-container { padding-top: 1.5rem; padding-bottom: 3rem; max-width: 1280px; }
+
+.stMarkdown, [data-testid="stMarkdownContainer"],
+[data-testid="stText"], .stCaption, .stMetric,
+[data-testid="stWidgetLabel"], [data-testid="stMarkdownContainer"] p,
+[data-testid="stMarkdownContainer"] li, h1, h2, h3, h4, h5, h6,
+p, label, legend {
+    color: var(--app-text);
+}
+small, .stCaption, [data-testid="stCaptionContainer"] {
+    color: var(--muted-text) !important;
+}
+
+/* رأس الصفحة */
 .hero {
     background: linear-gradient(120deg,#10243A 0%,#174B70 58%,#2563A6 100%);
-    padding: 30px 32px; border-radius: 24px; color: white; margin-bottom: 22px;
+    padding: 30px 32px; border-radius: 24px; color: white !important; margin-bottom: 22px;
     box-shadow: 0 12px 35px rgba(16,36,58,.15);
 }
 .hero h1 { color:white !important; font-size:2.1rem; margin:0 0 8px 0; font-weight:800; }
-.hero p { color:#DCEAF8; font-size:1rem; margin:0; }
-.eyebrow { color:#9ED9E8; font-weight:700; letter-spacing:.3px; }
-.section-title { color:#10243A; font-weight:800; font-size:1.35rem; margin: 8px 0 14px; }
-.service-card {
-    background:white; border:1px solid #E3EAF2; border-radius:18px; padding:18px;
-    min-height:145px; box-shadow:0 5px 18px rgba(22,48,78,.045);
+.hero p { color:#DCEAF8 !important; font-size:1rem; margin:0; }
+.eyebrow { color:#9ED9E8 !important; font-weight:700; letter-spacing:.3px; }
+
+.section-title {
+    color: var(--app-text) !important; font-weight:800; font-size:1.35rem; margin:8px 0 14px;
 }
+.service-card, .info-card, .question-card {
+    background: var(--panel-bg) !important;
+    color: var(--app-text) !important;
+    border: 1px solid var(--app-border);
+    border-radius: 18px;
+    padding: 18px;
+    box-shadow: 0 5px 18px rgba(22,48,78,.045);
+}
+.service-card { min-height:145px; }
 .service-icon { font-size:1.8rem; margin-bottom:8px; }
-.service-title { color:#10243A; font-size:1.05rem; font-weight:800; margin-bottom:5px; }
-.service-desc { color:#64748B; font-size:.88rem; line-height:1.7; }
-.info-card { background:white; border:1px solid #E3EAF2; padding:16px 18px; border-radius:16px; }
-.question-card { background:white; border:1px solid #DCE6F1; border-radius:20px; padding:22px; }
-.small-muted { color:#64748B; font-size:.86rem; }
+.service-title { color:var(--app-text) !important; font-size:1.05rem; font-weight:800; margin-bottom:5px; }
+.service-desc, .small-muted { color:var(--muted-text) !important; font-size:.88rem; line-height:1.7; }
+.question-card { border-radius:20px; padding:22px; }
+
+/* حقول الإدخال والقوائم */
+input, textarea, [data-baseweb="select"] > div,
+[data-baseweb="input"] > div, [data-baseweb="textarea"] > div {
+    color: var(--app-text) !important;
+}
+[data-baseweb="input"], [data-baseweb="textarea"], [data-baseweb="select"] > div,
+[data-testid="stFileUploader"], [data-testid="stDateInput"] {
+    background: var(--panel-bg) !important;
+    color: var(--app-text) !important;
+    border-color: var(--app-border) !important;
+}
+[data-baseweb="popover"], [data-baseweb="menu"], [role="listbox"], [role="option"] {
+    color: var(--app-text) !important;
+}
 div.stButton > button {
     border-radius:12px !important; font-family:'Cairo',sans-serif !important;
-    font-weight:700 !important; min-height:45px; border:1px solid #D6E1ED;
+    font-weight:700 !important; min-height:45px;
+    border:1px solid var(--app-border) !important;
+    color: var(--app-text) !important;
+    background: var(--panel-bg) !important;
 }
 div.stButton > button[kind="primary"] {
-    background:linear-gradient(100deg,#1767C2,#2486C8) !important; border:0 !important;
+    background:linear-gradient(100deg,#1767C2,#2486C8) !important;
+    border:0 !important; color:#FFFFFF !important;
 }
 .stProgress > div > div > div > div { background:linear-gradient(90deg,#168B9B,#2563EB); }
-[data-testid="stSidebar"] { background:#10243A; }
-[data-testid="stSidebar"] * { color:#F3F7FC; }
-[data-testid="stSidebar"] [data-testid="stMarkdownContainer"] p { color:#D9E5F2; }
-hr { border-color:#E2EAF2; }
-div[data-testid="stFileUploader"] { background:white; padding:12px; border-radius:14px; border:1px dashed #B8C9DC; }
+
+/* الشريط الجانبي */
+[data-testid="stSidebar"] { background:#10243A !important; }
+[data-testid="stSidebar"] *,
+[data-testid="stSidebar"] [data-testid="stMarkdownContainer"] p,
+[data-testid="stSidebar"] label,
+[data-testid="stSidebar"] .stCaption {
+    color:#F3F7FC !important;
+}
+hr { border-color:var(--app-border) !important; }
+div[data-testid="stFileUploader"] {
+    padding:12px; border-radius:14px; border:1px dashed var(--app-border) !important;
+}
 .stAlert { border-radius:14px; }
+[data-testid="stExpander"] {
+    background: var(--panel-bg); border: 1px solid var(--app-border); border-radius: 14px;
+}
+[data-testid="stMetricValue"], [data-testid="stMetricLabel"] {
+    color: var(--app-text) !important;
+}
 </style>
 """, unsafe_allow_html=True)
 

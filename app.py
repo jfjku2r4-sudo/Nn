@@ -17,8 +17,22 @@ except Exception:
     pass
 
 APP_TITLE = "الأستاذ الذكي"
-DEFAULT_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
-IMAGE_MODEL = os.getenv("GEMINI_IMAGE_MODEL", "gemini-2.0-flash-preview-image-generation")
+# نماذج النصوص المنشورة في دليل Google الرسمي. قد تختلف الإتاحة حسب الحساب.
+TEXT_MODELS = {
+    "Gemini 3.8 Flash — سريع ومتقدم (موصى به)": "gemini-3.8-flash",
+    "Gemini 3.7 Flash — أداء قوي": "gemini-3.7-flash",
+    "Gemini 3.6 Flash — متوازن": "gemini-3.6-flash",
+    "Gemini 3.5 Flash — استخدام عام": "gemini-3.5-flash",
+    "Gemini 3.5 Flash-Lite — اقتصادي وسريع": "gemini-3.5-flash-lite",
+    "Gemini 3.1 Flash-Lite — خفيف": "gemini-3.1-flash-lite",
+    "Gemini 3.1 Pro Preview — مهام معقدة (معاينة)": "gemini-3.1-pro-preview",
+    "Gemini 3 Flash Preview — سريع (معاينة)": "gemini-3-flash-preview",
+    "Gemini 2.5 Flash — متوازن": "gemini-2.5-flash",
+    "Gemini 2.5 Flash-Lite — اقتصادي": "gemini-2.5-flash-lite",
+    "Gemini 2.5 Pro — استدلال متقدم": "gemini-2.5-pro",
+}
+DEFAULT_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.8-flash")
+IMAGE_MODEL = os.getenv("GEMINI_IMAGE_MODEL", "gemini-3.1-flash-image")
 
 st.set_page_config(
     page_title="الأستاذ الذكي | مساعد الثانوية العامة",
@@ -145,7 +159,13 @@ def gemini_text(prompt: str, include_files: bool = True, use_search: bool = Fals
         contents=contents,
         config=config,
     )
-    return response.text or ""
+    result = getattr(response, "text", None)
+    if not result:
+        raise RuntimeError(
+            "لم يُرجع النموذج نصًا. قد يكون الرد محجوبًا بسبب إعدادات السلامة، "
+            "أو أن النموذج المختار لا يدعم توليد النصوص. جرّب Gemini 3.8 Flash."
+        )
+    return result
 
 def make_quiz(topic: str, count: int, level: str) -> List[Dict[str, Any]]:
     prompt = f"""
@@ -206,8 +226,11 @@ def make_quiz(topic: str, count: int, level: str) -> List[Dict[str, Any]]:
             "hint": str(q.get("hint", "راجع الفكرة الأساسية المرتبطة بالسؤال.")),
             "explanation": str(q.get("explanation", "راجع القاعدة أو الفكرة المرتبطة بالسؤال.")),
         })
-    if not normalized:
-        raise ValueError("الأسئلة التي أُنشئت غير مكتملة. حاول مرة أخرى.")
+    if len(normalized) != count:
+        raise ValueError(
+            f"أنشأ Gemini {len(normalized)} سؤالًا صالحًا فقط من أصل {count} مطلوب. "
+            "أعد المحاولة أو اختر عددًا أقل من الأسئلة."
+        )
     return normalized
 
 def start_quiz(title: str, topic: str, count: int, hints: int, level: str, stage_index: int = 0):
@@ -255,12 +278,41 @@ with st.sidebar:
     st.caption("مساعد الثانوية العامة")
     st.markdown("---")
     st.markdown("### إعداد الاتصال")
-    st.session_state.api_key = st.text_input(
+    api_key_value = st.text_input(
         "مفتاح Gemini API", value=st.session_state.api_key, type="password",
+        key="api_key_widget",
         help="احصل على مفتاحك من Google AI Studio. لا تشاركه مع أحد."
     )
-    st.session_state.model = st.text_input("اسم نموذج Gemini", value=st.session_state.model)
-    st.caption("المفتاح يُستخدم في جلسة التطبيق الحالية.")
+    st.session_state.api_key = api_key_value.strip()
+
+    model_labels = list(TEXT_MODELS.keys())
+    model_values = list(TEXT_MODELS.values())
+    current_model = st.session_state.model
+    selected_index = model_values.index(current_model) if current_model in model_values else 0
+    selected_label = st.selectbox("اختر نموذج الذكاء الاصطناعي", model_labels,
+                                  index=selected_index, key="model_picker")
+    if st.session_state.get("_last_model_picker") != selected_label:
+        st.session_state.model = TEXT_MODELS[selected_label]
+        st.session_state._last_model_picker = selected_label
+    elif current_model in model_values:
+        st.session_state.model = TEXT_MODELS[selected_label]
+
+    with st.expander("إدخال اسم نموذج آخر (اختياري)"):
+        custom_model = st.text_input(
+            "معرّف النموذج كما يظهر في Google AI Studio",
+            value=st.session_state.get("custom_model", ""),
+            key="custom_model_widget",
+            placeholder="مثال: gemini-flash-latest"
+        )
+        if st.button("استخدام الاسم المخصص", key="apply_custom_model"):
+            if custom_model.strip():
+                st.session_state.model = custom_model.strip()
+                st.success(f"سيُستخدم النموذج: {custom_model.strip()}")
+                st.rerun()
+            else:
+                st.warning("اكتب معرّف النموذج أولًا.")
+    st.caption(f"النموذج الحالي: {st.session_state.model}")
+    st.caption("المفتاح يُستخدم في جلسة التطبيق الحالية ولا يُعرض للمستخدمين الآخرين.")
     st.markdown("---")
     if st.button("🏠 الصفحة الرئيسية", use_container_width=True):
         st.session_state.service = "home"
@@ -380,7 +432,7 @@ if st.session_state.service == "explain":
     st.stop()
 
 # ----------------------------- Quiz setup screens ----------------------------
-if st.session_state.service in ("full_quiz", "custom_quiz", "three_quiz"):
+if st.session_state.service in ("full_quiz", "custom_quiz", "three_quiz") and st.session_state.quiz is None:
     service = st.session_state.service
     st.markdown('<div class="section-title" dir="rtl">📝 إعداد الاختبار</div>', unsafe_allow_html=True)
     if service == "three_quiz":
@@ -582,6 +634,7 @@ if st.session_state.service == "research":
 # ----------------------------- Infographic -----------------------------------
 if st.session_state.service == "infographic":
     st.markdown('<div class="section-title" dir="rtl">🖼️ إنشاء صورة توضيحية أو إنفوجرافيك</div>', unsafe_allow_html=True)
+    st.info(f"توليد الصور يستخدم نموذج الصور: {IMAGE_MODEL}، بينما الشرح والاختبارات يستخدمان النموذج النصي المختار من الشريط الجانبي.")
     topic = st.text_area("حدد الفكرة أو الجزء الذي تريد تحويله إلى إنفوجرافيك")
     style = st.selectbox("النمط البصري", ["إنفوجرافيك تعليمي منظم", "خريطة ذهنية", "مخطط خطوات", "رسم علمي توضيحي"])
     if st.button("إنشاء الصورة", type="primary"):
@@ -605,7 +658,11 @@ if st.session_state.service == "infographic":
                         config=types.GenerateContentConfig(response_modalities=["TEXT", "IMAGE"])
                     )
                 found = False
-                for part in response.candidates[0].content.parts:
+                candidates = getattr(response, "candidates", None) or []
+                response_parts = []
+                if candidates and getattr(candidates[0], "content", None):
+                    response_parts = getattr(candidates[0].content, "parts", []) or []
+                for part in response_parts:
                     if getattr(part, "inline_data", None):
                         st.image(part.inline_data.data, caption="الإنفوجرافيك التعليمي", use_container_width=True)
                         st.session_state.last_generated_image = part.inline_data.data
